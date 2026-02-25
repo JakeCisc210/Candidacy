@@ -81,7 +81,7 @@ def manual_support_enumeration(A,B):
                 p2 = [Fraction(x).limit_denominator() for x in p2]
                 print("p1: ",p1)
                 print("p2: ",p2)
-                return
+    return
 
 ## Example 1
 
