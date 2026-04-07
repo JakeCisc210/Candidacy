@@ -145,3 +145,4 @@ for sigma_1, sigma_2 in game.vertex_enumeration():
     print("Player 1:", sigma_1)
     print("Player 2:", sigma_2)
     print("\n")
+     

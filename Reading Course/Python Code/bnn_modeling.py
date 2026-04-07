@@ -3,7 +3,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-import torch.nn.functional as F
 
 def bnn_ode_solver(p1,p2,A,B,T,N):
   """
@@ -79,8 +78,13 @@ def bnn_ode_solver(p1,p2,A,B,T,N):
   return t_mesh,p_values
     
 # %% Modules to Execute
-
-modules_to_execute = [2.4]
+if __name__ == "__main__":
+    modules_to_execute = []
+else:
+    print("WTF")
+    modules_to_execute = []
+    
+    
 # 0 - Week 7: 2 x 2 Payoff Matrices
 # 1 - Mesh Spacing with Week 7 Payoff Matrices
 # 2 - Check Run Times vs N for 2 x 2 Matrices from Week 7
