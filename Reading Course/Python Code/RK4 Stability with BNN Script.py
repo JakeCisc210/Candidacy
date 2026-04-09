@@ -103,11 +103,10 @@ def bnn_ode_solver(p1,p2,A,B,step_size,T):
 
 #%% Simple BNNs
 
-A = np.array([[2,3],
-           [4,1]], dtype=float)
+A = np.array([[6,-2],
+           [-4,5]], dtype=float)
 
-B = np.array([[7, 5],
-           [6, 8]], dtype=float)
+B = -A
 
 x1 = 1
 x2 = 1
@@ -140,16 +139,15 @@ plt.show()
 
 #%% Error as a function of h
 
-A = np.array([[2,3],
-           [4,1]], dtype=float)
+A = np.array([[6,-2],
+           [-4,5]], dtype=float)
 
-B = np.array([[7, 5],
-           [6, 8]], dtype=float)
+B = -A
 
-x1 = .8
-x2 = .8
+x1 = .99
+x2 = .99
 T = 100
-h_array = np.linspace(.25, 1.42, 200)
+h_array = np.linspace(.001, .01, 20)
 
 def equilibrium_metric(p,p_expected): # RMS Error
     metric_squared = np.dot(p-p_expected,p-p_expected)/len(p)
@@ -160,14 +158,14 @@ counter = 0
 for h in h_array:
     t,solution_matrix = bnn_ode_solver([x1,1-x1],[x2,1-x2],A,B,h,T)
     p = np.array([solution_matrix[0,-1],solution_matrix[1,-1],solution_matrix[2,-1],solution_matrix[3,-1]])
-    p_actual = np.array([.5,.5,.5,.5])
+    p_actual = np.array([9/17, 8/17, 7/17, 10/17])
     metric_array[counter] = equilibrium_metric(p,p_actual)
     counter += 1
 
 # Plot trajectories
 plt.figure(figsize=(10, 6))
 plt.plot(h_array, metric_array, label="Error",color="black")
-plt.plot(np.array([.696,.696]),np.array([0,4.5e11]), label="h=.696",linestyle='--', color='green')
+plt.plot(np.array([.696,.696]),np.array([0,.1]), label="h=.696",linestyle='--', color='green')
 plt.xlabel("Step Size")
 plt.ylabel("Equilibrium Error")
 plt.title("BNN Accuracy as Function of Step Size")
