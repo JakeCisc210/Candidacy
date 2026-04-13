@@ -8,6 +8,10 @@ def vertex_enumeration(A,B):
     m, n = A.shape
     tol = 1e-12
     
+    # Normalize Payoff Matrices
+    A = (A - A.min()) / (A.max() - A.min())
+    B = (B - B.min()) / (B.max() - B.min())
+     
     # Player 1 Vertices
     constraint_matrix = np.vstack((-1*np.eye(m),B.T))
     contstraint_values = np.concatenate([np.zeros(m),np.ones(n)])
@@ -33,11 +37,7 @@ def vertex_enumeration(A,B):
                 vertex_strat_storage[num_strats,:] = player_1_vertex
                 vertex_label_storage[num_strats,list(constraint_combo)] = 1
                 num_strats += 1
-            if np.all(player_1_vertex <= 0) and np.all(eqn_values >= (contstraint_values-tol)):
-                vertex_strat_storage[num_strats,:] = player_1_vertex
-                vertex_label_storage[num_strats,list(constraint_combo)] = 1
-                num_strats += 1              
-
+                
         except np.linalg.LinAlgError:
             continue 
     
@@ -69,11 +69,7 @@ def vertex_enumeration(A,B):
             if np.all(player_2_vertex >= 0) and np.all(eqn_values <= (contstraint_values+tol)):
                 vertex_strat_storage[num_strats,:] = player_2_vertex
                 vertex_label_storage[num_strats,list(constraint_combo)] = 1
-                num_strats += 1
-            if np.all(player_2_vertex <= 0) and np.all(eqn_values >= (contstraint_values-tol)):
-                vertex_strat_storage[num_strats,:] = player_2_vertex
-                vertex_label_storage[num_strats,list(constraint_combo)] = 1
-                num_strats += 1    
+                num_strats += 1  
 
         except np.linalg.LinAlgError:
             continue 
@@ -160,6 +156,30 @@ A = np.array([
 B = np.array([
     [0, 2, -1],
     [3, 0,  0]
+], dtype=float)
+
+vertex_enumeration(A,B)        
+            
+game = nash.Game(A, B)
+for sigma_1, sigma_2 in game.vertex_enumeration():
+    sigma_1  =[Fraction(x).limit_denominator() for x in sigma_1]
+    sigma_2  =[Fraction(x).limit_denominator() for x in sigma_2]
+    print("Player 1:", sigma_1)
+    print("Player 2:", sigma_2)
+    print("\n")
+    
+ ## Example 5
+ 
+A = np.array([
+    [-2, -7, -3],
+    [-3, -2, 1],
+    [1, -3, -2]
+], dtype=float)
+
+B = np.array([
+    [-2, -3, 1],
+    [1, -2,  -3],
+    [-3,1,-2]
 ], dtype=float)
 
 vertex_enumeration(A,B)        
