@@ -1,75 +1,71 @@
-# %% JAX 1D viscous compressible Navier-Stokes
-
 import jax
 import jax.numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
 
-# -----------------------
 # Parameters
-# -----------------------
 N = 400
 L = 1.0
-dx = L / N
+dx = L/N
 
-T = 0.15
-dt = 2e-5
-steps = int(T / dt)
+T = .21
+dt = 2e-6
+steps = int(T/dt)
 
-gamma = 1.4
-K = 1.0
-mu = 0.002
+viscosity = 1/2
+assert(dt<=dx**2/2/viscosity) # Diffusive Condition
 
 x = jnp.linspace(0, L, N, endpoint=False)
 
-# Initial condition
-rho = 1.0 + 0.25 * jnp.exp(-200 * (x - 0.5)**2)
+# Initial Condition
+rho = 1.0 + 0.25*jnp.exp(-200*(x - 0.25)**2) + 0.25*jnp.exp(-200*(x - 0.75)**2)
 u = jnp.zeros_like(x)
 
-# -----------------------
-# Finite differences
-# -----------------------
+# Finite Differences [Second Order]
 def ddx(f):
-    return (jnp.roll(f, -1) - jnp.roll(f, 1)) / (2 * dx)
+    return (jnp.roll(f, -1)-jnp.roll(f, 1))/(2*dx)
 
 def d2dx2(f):
-    return (jnp.roll(f, -1) - 2*f + jnp.roll(f, 1)) / dx**2
+    return (jnp.roll(f,-1)-2*f+jnp.roll(f, 1))/dx**2
 
+gamma = .5
 def pressure(rho):
-    return K * rho**gamma
+    return rho**gamma
 
-# -----------------------
-# One time step
-# -----------------------
+# One Time Step
 @jax.jit
 def step(rho, u):
     p = pressure(rho)
 
-    # rho_t + (rho u)_x = 0
-    rho_t = -ddx(rho * u)
+    # Flow
+    u_t = -u*ddx(u) + viscosity*d2dx2(u) - (1/rho)*ddx(p) 
+    
+    # Density
+    rho_t = -ddx(rho*u)
 
-    # u_t + u u_x + (1/rho) p_x = mu u_xx
-    u_t = -u * ddx(u) - (1 / rho) * ddx(p) + mu * d2dx2(u)
-
+    # Update
     rho_new = rho + dt * rho_t
     u_new = u + dt * u_t
-
+    
+    # Minimum Density
     rho_new = jnp.maximum(rho_new, 1e-6)
 
     return rho_new, u_new
 
-# -----------------------
-# Run simulation
-# -----------------------
+# Run Simulation
 plt.figure()
 
 for n in range(steps):
     rho, u = step(rho, u)
+    
+    c = jnp.sqrt(gamma * rho**(gamma - 1)) 
+    max_wave_speed = jnp.max(jnp.abs(u) + c)
+    assert(dt <= dx/max_wave_speed)
 
-    if n % 500 == 0:
+    if n % 50000 == 0:
         plt.clf()
         plt.plot(np.array(x), np.array(rho), label=r"$\rho$")
-        plt.plot(np.array(x), np.array(u), label=r"$u$")
+        plt.plot(np.array(x), np.array(u), label=r"$v$")
         plt.ylim(-0.5, 1.5)
         plt.title(f"1D compressible Navier-Stokes, t = {n*dt:.4f}")
         plt.xlabel("x")
