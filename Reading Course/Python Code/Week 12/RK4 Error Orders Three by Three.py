@@ -1,17 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
+import plotly.graph_objects as go
+import plotly.io as pio
+pio.renderers.default = "browser"
 
 def activation_function(x):
-    return np.log(1+x*np.exp(x))
+    return np.maximum(0,x)
 
 def ode_system(t,p,A,B):
   """
   t - Current Time
   p - Concatenated Probability Array
   """
-  p1 = p[range(2)]
-  p2 = p[range(2,4)]
+  p1 = p[range(3)]
+  p2 = p[range(3,6)]
       
   # Expected Value Under Current Mixed Strategies
   current_value1 = p1.T @ A @ p2
@@ -81,6 +84,9 @@ def bnn_ode_solver(p1,p2,A,B,h,T):
     dp1_dt = phi_vector1 - p1*sum(phi_vector1)
     dp2_dt = phi_vector2 - p2*sum(phi_vector2)
 
+    if step_size == .01 and (index == 0 or index == N-1):
+        print(np.hstack((phi_vector1,phi_vector2)))
+            
     return np.hstack((dp1_dt,dp2_dt))
 
 
@@ -110,15 +116,15 @@ def equilibrium_metric(p,p_expected): # RMS Error
 
 #%% Error Order
 
-A = np.array([[2,3],
-           [4,1]], dtype=float)
+A = np.array([[0,3,0],[1,0,4],
+           [2,1,0]], dtype=float)
 
-B = np.array([[7,5],
-           [6,8]], dtype=float)
+B = np.array([[1,2,0],[3,0,1],
+           [0,1,4]], dtype=float)
 
-p1 = [1/3,2/3]
-p2 = [1/3,2/3]
-T = 10
+p1 = [1/3,1/3,1/3]
+p2 = [1/3,1/3,1/3]
+T = .5
 
 h_array = np.logspace(0, -3, 100)
 
@@ -154,7 +160,7 @@ for h in h_array:
 # Errors
 plt.figure(figsize=(10, 6))
 plt.plot(np.log10(dt_array), np.log10(metric_array),color="red",label="Error")
-plt.plot(np.log10(dt_array), -6+4*np.log10(dt_array),label='O($h^{-4}$)', color='black',linestyle='--',)
+plt.plot(np.log10(dt_array), -3+4*np.log10(dt_array),label='O($h^{-4}$)', color='black',linestyle='--',)
 plt.legend()
 plt.xlabel("log10(Step Size)")
 plt.ylabel("log10(Error)")
@@ -162,20 +168,105 @@ plt.title("BNN Error Order")
 plt.grid(True)
 plt.show()
 
-# Probability Values
-fig, ax = plt.subplots()
-ax.imshow(np.zeros((2,2)),extent=[0,2,2,0],alpha=0)
+# Probability Values - Player 1
+t,solution_matrix,h_real = bnn_ode_solver(p1,p2,A,B,.01,T)
 
-ax.set_xticks(np.arange(0, 3, 1))
-ax.set_yticks(np.arange(0, 3, 1))
-ax.grid(color="black", linewidth=1)
+fig = go.Figure(data=[
+    go.Scatter3d(
+        x=solution_matrix[0,:],
+        y=solution_matrix[1,:],
+        z=solution_matrix[2,:],
+        mode='markers',
+        showlegend=False,
+        marker=dict(size=4)
+    )
+])
 
-ax.set_xticks(np.arange(2)+0.5, minor=True)
-ax.set_yticks(np.arange(2) + 0.5, minor=True)
-ax.set_xticklabels([f"Strategy {strat}" for strat in {"A","B"}], minor=True,color="blue")
-ax.set_yticklabels([f"Strategy {i+1}" for i in range(A.shape[0])], minor=True,color="red")
-ax.tick_params(axis='x', which='minor',labeltop=True, labelbottom=False) 
+fig.update_layout(
+    scene=dict(
+        xaxis_title='x¹',
+        yaxis_title='y¹',
+        zaxis_title='z¹'
+    )
+)
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(range=[0, 1]),
+        yaxis=dict(range=[0, 1]),
+        zaxis=dict(range=[0, 1])
+    )
+)
 
-ax.tick_params(which="major", labelbottom=False, labelleft=False)
-ax.tick_params(which="minor", length=0)
-plt.scatter(2*solution_matrix[2,:],2*solution_matrix[0,:],color="black")
+fig.add_trace(go.Scatter3d(
+    x=[1], y=[0], z=[0],
+    mode='markers',
+    marker=dict(size=6, color='green'),
+    name='First NE'
+))
+
+fig.add_trace(go.Scatter3d(
+    x=[0], y=[2/3], z=[1/3],
+    mode='markers',
+    marker=dict(size=6, color='yellow'),
+    name='Second NE'
+))
+
+fig.add_trace(go.Scatter3d(
+    x=[1/2], y=[1/4], z=[1/4],
+    mode='markers',
+    marker=dict(size=6, color='red'),
+    name='Third NE'
+))
+
+fig.show()
+
+# Probability Values - Player 2
+fig = go.Figure(data=[
+    go.Scatter3d(
+        x=solution_matrix[3,:],
+        y=solution_matrix[4,:],
+        z=solution_matrix[5,:],
+        mode='markers',
+        showlegend=False,
+        marker=dict(size=4)
+    )
+])
+
+fig.update_layout(
+    scene=dict(
+        xaxis_title='x²',
+        yaxis_title='y²',
+        zaxis_title='z²'
+    )
+)
+
+fig.update_layout(
+    scene=dict(
+        xaxis=dict(range=[0, 1]),
+        yaxis=dict(range=[0, 1]),
+        zaxis=dict(range=[0, 1])
+    )
+)
+
+fig.add_trace(go.Scatter3d(
+    x=[0], y=[1], z=[0],
+    mode='markers',
+    marker=dict(size=6, color='green'),
+    name='First NE'
+))
+
+fig.add_trace(go.Scatter3d(
+    x=[4/5], y=[0], z=[1/5],
+    mode='markers',
+    marker=dict(size=6, color='yellow'),
+    name='Second NE'
+))
+
+fig.add_trace(go.Scatter3d(
+    x=[2/5], y=[2/5], z=[1/5],
+    mode='markers',
+    marker=dict(size=6, color='red'),
+    name='Third NE'
+))
+
+fig.show()
