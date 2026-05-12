@@ -1,20 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import solve_ivp
-import plotly.graph_objects as go
-import plotly.io as pio
-pio.renderers.default = "browser"
 
 def activation_function(x):
     return np.maximum(0,x)
+    #return np.log(1+np.exp(x))
+    #return np.where(x <= 0, 0, x**2)
 
 def ode_system(t,p,A,B):
   """
   t - Current Time
   p - Concatenated Probability Array
   """
-  p1 = p[range(3)]
-  p2 = p[range(3,6)]
+  p1 = p[range(2)]
+  p2 = p[range(2,4)]
       
   # Expected Value Under Current Mixed Strategies
   current_value1 = p1.T @ A @ p2
@@ -61,8 +59,8 @@ def bnn_ode_solver(p1,p2,A,B,h,T):
     t - Current Time
     p - Concatenated Probability Array
     """
-    p1 = p[range(m)]
-    p2 = p[range(m,n+m)]
+    p1 = p[:m]
+    p2 = p[m:m+n]
         
     # Expected Value Under Current Mixed Strategies
     current_value1 = p1.T @ A @ p2
@@ -113,35 +111,21 @@ def equilibrium_metric(p,p_expected): # RMS Error
 
 #%% Error Order
 
-A = np.array([[0,3,0],[1,0,4],
-           [2,1,0]], dtype=float)
+A = np.array([[2,4],[11,1]], dtype=float)
+B = np.array([[8,5],[6,23]], dtype=float)
 
-B = np.array([[1,2,0],[3,0,1],
-           [0,1,4]], dtype=float)
+A = (A - np.min(A)) / (np.max(A) - np.min(A))
+B = (B - np.min(B)) / (np.max(B) - np.min(B))
 
-p1 = [1/2-.02,1/4+.01,1/4+.01]
-p2 = [2/5-.01,2/5-.01,1/5+.02]
+p1 = [1/3,2/3]
+p2 = [1/3,2/3]
 T = 20
 
-h_array = np.logspace(0, -3, 100)
-
-sol = solve_ivp(
-    ode_system, 
-    (0,T), 
-    np.hstack((p1,p2)), 
-    args=(A, B), 
-    method='RK45', 
-    t_eval=[T],
-    rtol=1e-12, 
-    atol=1e-14
-)
+h_array = np.logspace(0, -2, 100)
 
 # Exact solutions
-x1 = sol.y[0]
-y1 = sol.y[1]
-x2 = sol.y[2]
-y2 = sol.y[3]
-p_actual = np.array([x1[-1], y1[-1], x2[-1], y2[-1]])
+t,solution_matrix,h_real = bnn_ode_solver(p1,p2,A,B,.001,T)
+p_actual = np.array([solution_matrix[0,-1],solution_matrix[1,-1],solution_matrix[2,-1],solution_matrix[3,-1]])
 
 metric_array = np.zeros((len(h_array)))
 dt_array = np.zeros((len(h_array)))
@@ -157,7 +141,7 @@ for h in h_array:
 # Errors
 plt.figure(figsize=(10, 6))
 plt.plot(np.log10(dt_array), np.log10(metric_array),color="red",label="Error")
-plt.plot(np.log10(dt_array), -4+2*np.log10(dt_array),label='O($h^{-2}$)', color='black',linestyle='--',)
+plt.plot(np.log10(dt_array), -5+2*np.log10(dt_array),label='O($h^{-2}$)', color='black',linestyle='--',)
 plt.legend()
 plt.xlabel("log10(Step Size)")
 plt.ylabel("log10(Error)")
@@ -165,105 +149,46 @@ plt.title("BNN Error Order")
 plt.grid(True)
 plt.show()
 
-# Probability Values - Player 1
-t,solution_matrix,h_real = bnn_ode_solver(p1,p2,A,B,.01,T)
+# Probability Values
+fig, ax = plt.subplots()
+ax.imshow(np.zeros((2,2)),extent=[0,2,2,0],alpha=0)
 
-fig = go.Figure(data=[
-    go.Scatter3d(
-        x=solution_matrix[0,:],
-        y=solution_matrix[1,:],
-        z=solution_matrix[2,:],
-        mode='markers',
-        showlegend=False,
-        marker=dict(size=4)
-    )
-])
+ax.set_xticks(np.arange(0, 3, 1))
+ax.set_xticks(np.arange(0, 3, 1))
+ax.set_yticks(np.arange(0, 3, 1))
+ax.grid(color="black", linewidth=1)
 
-fig.update_layout(
-    scene=dict(
-        xaxis_title='x¹',
-        yaxis_title='y¹',
-        zaxis_title='z¹'
-    )
-)
-fig.update_layout(
-    scene=dict(
-        xaxis=dict(range=[0, 1]),
-        yaxis=dict(range=[0, 1]),
-        zaxis=dict(range=[0, 1])
-    )
-)
+ax.set_xticks(np.arange(2)+0.5, minor=True)
+ax.set_yticks(np.arange(2) + 0.5, minor=True)
+ax.set_xticklabels(["Strategy A", "Strategy B"], minor=True, color="blue")
+ax.set_yticklabels([f"Strategy {i+1}" for i in range(A.shape[0])], minor=True,color="red")
+ax.tick_params(axis='x', which='minor',labeltop=True, labelbottom=False) 
 
-fig.add_trace(go.Scatter3d(
-    x=[1], y=[0], z=[0],
-    mode='markers',
-    marker=dict(size=6, color='green'),
-    name='First NE'
-))
+ax.tick_params(which="major", labelbottom=False, labelleft=False)
+ax.tick_params(which="minor", length=0)
+plt.scatter(2*solution_matrix[2,:],2*solution_matrix[0,:],color="black")
 
-fig.add_trace(go.Scatter3d(
-    x=[0], y=[2/3], z=[1/3],
-    mode='markers',
-    marker=dict(size=6, color='yellow'),
-    name='Second NE'
-))
+plt.scatter(2*1/4,2*17/20, color="green", s=100)
 
-fig.add_trace(go.Scatter3d(
-    x=[1/2], y=[1/4], z=[1/4],
-    mode='markers',
-    marker=dict(size=6, color='red'),
-    name='Third NE'
-))
+# Convergence over Time
+p_actual = [17/20,3/20,1/4,3/4]
+T_array = np.logspace(1, 3, 100)
+metric_array = np.zeros((len(T_array)))
+h = .1
 
-fig.show()
-
-# Probability Values - Player 2
-fig = go.Figure(data=[
-    go.Scatter3d(
-        x=solution_matrix[3,:],
-        y=solution_matrix[4,:],
-        z=solution_matrix[5,:],
-        mode='markers',
-        showlegend=False,
-        marker=dict(size=4)
-    )
-])
-
-fig.update_layout(
-    scene=dict(
-        xaxis_title='x²',
-        yaxis_title='y²',
-        zaxis_title='z²'
-    )
-)
-
-fig.update_layout(
-    scene=dict(
-        xaxis=dict(range=[0, 1]),
-        yaxis=dict(range=[0, 1]),
-        zaxis=dict(range=[0, 1])
-    )
-)
-
-fig.add_trace(go.Scatter3d(
-    x=[0], y=[1], z=[0],
-    mode='markers',
-    marker=dict(size=6, color='green'),
-    name='First NE'
-))
-
-fig.add_trace(go.Scatter3d(
-    x=[4/5], y=[0], z=[1/5],
-    mode='markers',
-    marker=dict(size=6, color='yellow'),
-    name='Second NE'
-))
-
-fig.add_trace(go.Scatter3d(
-    x=[2/5], y=[2/5], z=[1/5],
-    mode='markers',
-    marker=dict(size=6, color='red'),
-    name='Third NE'
-))
-
-fig.show()
+counter = 0
+for T in T_array: 
+    t,solution_matrix,h_real = bnn_ode_solver(p1,p2,A,B,h,T)
+    p = np.array([solution_matrix[0,-1],solution_matrix[1,-1],solution_matrix[2,-1],solution_matrix[3,-1]])    
+    metric_array[counter] = equilibrium_metric(p,p_actual)
+    counter += 1
+    
+plt.figure(figsize=(10, 6))
+plt.plot(np.log10(T_array), np.log10(metric_array),color="red",label="Error")
+plt.plot(np.log10(T_array), -.5-np.log10(T_array),label='O($T^{-1}$)', color='black',linestyle='--',)
+plt.legend()
+plt.xlabel("log10(T)")
+plt.ylabel("log10(Error)")
+plt.title("BNN Convergence to Nash Equilibirium")
+plt.grid(True)
+plt.show()
