@@ -4,9 +4,9 @@ from scipy.integrate import solve_ivp
 
 
 def activation_function(x):
-    #return np.maximum(0,x)
+    return np.maximum(0,x)
     #return np.log(1+np.exp(x))
-    return np.where(x <= 0, 0, x**2)
+    #return np.where(x <= 0, 0, x**2)
 
 def ode_system(t,p,A,B):
   """
@@ -113,8 +113,8 @@ def equilibrium_metric(p,p_expected): # RMS Error
 
 #%% Error Order
 
-A = np.array([[2,4],[11,1]], dtype=float)
-B = np.array([[8,5],[6,23]], dtype=float)
+A = np.array([[2,4],[5,1]], dtype=float)
+B = -A
 
 #A = (A - np.min(A)) / (np.max(A) - np.min(A))
 #B = (B - np.min(B)) / (np.max(B) - np.min(B))
@@ -187,7 +187,7 @@ plt.scatter(2*solution_matrix[2,:],2*solution_matrix[0,:],color="black")
 plt.scatter(2*1/4,2*17/20, color="green", s=100)
 
 # Convergence over Time
-p_actual = [17/20,3/20,1/4,3/4]
+p_actual = [2/3,1/3,1/2,1/2]
 T_array = np.logspace(1, 3, 100)
 metric_array = np.zeros((len(T_array)))
 h = .1
